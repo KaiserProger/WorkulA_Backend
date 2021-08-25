@@ -29,12 +29,12 @@ func NewUser(name string, email string, password string) *User {
 }
 func GetUserByEmail(email string) *User {
 	user := &User{}
-	db.Model(model).Where("email = ?", email).Take(user)
+	db.Model(model).Where("email = ?", email).First(user)
 	return user
 }
 func GetUserByID(user_id int) *User {
 	user := &User{}
-	db.Model(model).Where("user_id = ?", user_id).Take(user)
+	db.Model(model).Where("user_id = ?", user_id).First(user)
 	return user
 }
 func AppendUserToDB(user *User) {

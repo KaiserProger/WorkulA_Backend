@@ -24,7 +24,7 @@ func NewSession(user_id int, session_key [32]byte, mstime int64) *Session {
 }
 func GetSessionByID(user_id int) *Session {
 	session := &Session{}
-	db.Model(&Session{}).Where("user_id = ?", user_id).Take(session)
+	db.Model(&Session{}).Where("user_id = ?", user_id).FirstOrCreate(session)
 	return session
 }
 func DecodeSession(c echo.Context) *Session {
