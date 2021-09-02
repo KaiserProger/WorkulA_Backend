@@ -19,9 +19,11 @@ func (err InvalidPasswordError) Error() string {
 	return "Invalid password!"
 }
 
-func SignIn(email string, password string, mstime int64) ([32]byte, bool) {
-	psd := GetUserByEmail(email).Password
-	if psd != password && password == "" {
+func SignIn(email string, password string, mstime int64, user *User) ([32]byte, bool) {
+	if user == nil {
+		return [32]byte{}, false
+	}
+	if user.Password != password || user.Password == "" {
 		return [32]byte{}, false
 	}
 	key := sha256.Sum256([]byte(password + strconv.FormatInt(mstime, 10)))
@@ -34,10 +36,13 @@ func VerifyKey(user_id int, key string) bool {
 }
 func SignInHandler(c echo.Context, _user *User) error {
 	_user = GetUserByEmail(_user.Email)
+	if _user == nil {
+		return c.JSON(http.StatusForbidden, &Session{})
+	}
 	log.Print("Sign in: Got user from DB: ")
 	log.Printf("%v\n", _user)
 	mstime := time.Now().Unix()
-	key, is := SignIn(_user.Email, _user.Password, mstime)
+	key, is := SignIn(_user.Email, _user.Password, mstime, _user)
 	log.Println("Sign in: Key generated")
 	if !is {
 		return c.JSON(http.StatusForbidden, &Session{})

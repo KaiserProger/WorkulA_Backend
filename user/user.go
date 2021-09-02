@@ -1,6 +1,7 @@
 package user
 
 import (
+	"errors"
 	"log"
 
 	"gorm.io/gorm"
@@ -29,7 +30,10 @@ func NewUser(name string, email string, password string) *User {
 }
 func GetUserByEmail(email string) *User {
 	user := &User{}
-	db.Model(model).Where("email = ?", email).First(user)
+	result := db.Model(model).Where("email = ?", email).First(user)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil
+	}
 	return user
 }
 func GetUserByID(user_id int) *User {
