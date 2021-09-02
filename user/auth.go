@@ -20,7 +20,7 @@ func (err InvalidPasswordError) Error() string {
 }
 
 func SignIn(email string, password string, mstime int64) ([32]byte, bool) {
-	if GetUserByEmail(email).Password != password {
+	if GetUserByEmail(email).Password != password && password == "" {
 		return [32]byte{}, false
 	}
 	key := sha256.Sum256([]byte(password + strconv.FormatInt(mstime, 10)))
@@ -33,7 +33,8 @@ func VerifyKey(user_id int, key string) bool {
 }
 func SignInHandler(c echo.Context, _user *User) error {
 	_user = GetUserByEmail(_user.Email)
-	log.Println("Sign in: Got user from DB")
+	log.Print("Sign in: Got user from DB: ")
+	log.Printf("%v\n", _user)
 	mstime := time.Now().Unix()
 	key, is := SignIn(_user.Email, _user.Password, mstime)
 	log.Println("Sign in: Key generated")
