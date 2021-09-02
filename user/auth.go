@@ -7,17 +7,11 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"workula/globals"
 	"workula/util"
 
 	"github.com/labstack/echo/v4"
 )
-
-type InvalidPasswordError struct {
-}
-
-func (err InvalidPasswordError) Error() string {
-	return "Invalid password!"
-}
 
 func SignIn(email string, password string, mstime int64, user *User) ([32]byte, bool) {
 	if user == nil {
@@ -35,6 +29,9 @@ func VerifyKey(user_id int, key string) bool {
 	return string(k[:]) == key
 }
 func SignInHandler(c echo.Context, _user *User) error {
+	if c.Request().Header.Get("AUTHORIZATION") != globals.Secret {
+		return c.JSON(http.StatusForbidden, &Session{})
+	}
 	_user = GetUserByEmail(_user.Email)
 	if _user == nil {
 		return c.JSON(http.StatusForbidden, &Session{})
