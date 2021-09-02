@@ -20,7 +20,8 @@ func (err InvalidPasswordError) Error() string {
 }
 
 func SignIn(email string, password string, mstime int64) ([32]byte, bool) {
-	if GetUserByEmail(email).Password != password && password == "" {
+	psd := GetUserByEmail(email).Password
+	if psd != password && password == "" {
 		return [32]byte{}, false
 	}
 	key := sha256.Sum256([]byte(password + strconv.FormatInt(mstime, 10)))
