@@ -3,16 +3,12 @@ package user
 import (
 	"errors"
 	"log"
+	"workula/objects"
 
 	"gorm.io/gorm"
 )
 
-type User struct {
-	UserId   int    `gorm:"primary_key" json:"user_id,omitempty"`
-	Name     string `json:"name,omitempty"`
-	Email    string `json:"email,omitempty"`
-	Password string `json:"password,omitempty"`
-}
+type User objects.User
 
 var db *gorm.DB
 var registeredUsers int = 0
@@ -35,6 +31,14 @@ func GetUserByEmail(email string) *User {
 		return nil
 	}
 	return user
+}
+func FindUserByName(name string) *[]User {
+	users := make([]User, 0)
+	result := db.Model(model).Where("name LIKE ?", name).Find(&users)
+	if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+		return nil
+	}
+	return &users
 }
 func GetUserByID(user_id int) *User {
 	user := &User{}

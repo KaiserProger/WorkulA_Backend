@@ -12,9 +12,10 @@ import (
 func main() {
 	db.InitDB()
 	server := echo.New()
+	group := server.Host("/main", echo.WrapMiddleware())
 	server.POST("/auth/signin", handlers.SignIn)
 	server.POST("/auth/signup", handlers.SignUp)
-	server.POST("/auth/connect", handlers.Connect)
+	server.POST("/connect", handlers.Connect)
 	log.Fatal(server.Start(":" + string(os.Getenv("PORT"))))
 	db.CloseDB()
 }

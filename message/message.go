@@ -64,7 +64,8 @@ func GetLastPages(count int) []*Message {
 	incrementer := 0
 	for rows.Next() {
 		messages[incrementer] = &Message{}
-		rows.Scan(messages[incrementer])
+		err = rows.Scan(messages[incrementer])
+		util.CheckErrors("GetLastPages CheckingRows", err)
 		incrementer += 1
 	}
 	return messages
