@@ -1,11 +1,21 @@
-module workula
-// +heroku goVersion go1.16
-go 1.16
+module WorkulA
+
+go 1.17
 
 require (
-	github.com/gorilla/websocket v1.4.2
-	github.com/labstack/echo/v4 v4.5.0
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5 // indirect
-	gorm.io/driver/sqlite v1.1.4
-	gorm.io/gorm v1.21.13
+	github.com/gofiber/fiber/v2 v2.20.2
+	gorm.io/driver/sqlite v1.1.6
+	gorm.io/gorm v1.21.16
+)
+
+require (
+	github.com/andybalholm/brotli v1.0.2 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.2 // indirect
+	github.com/klauspost/compress v1.13.4 // indirect
+	github.com/mattn/go-sqlite3 v1.14.8 // indirect
+	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasthttp v1.29.0 // indirect
+	github.com/valyala/tcplisten v1.0.0 // indirect
+	golang.org/x/sys v0.0.0-20210514084401-e8d321eab015 // indirect
 )

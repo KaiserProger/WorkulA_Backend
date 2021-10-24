@@ -1,82 +1,73 @@
 package handlers
 
 import (
+	"WorkulA/db"
+	"WorkulA/models/session"
+	"WorkulA/models/user"
+	"WorkulA/util"
 	"log"
 	"net/http"
-	"workula/message"
-	"workula/objects"
-	"workula/user"
-	"workula/util"
 
-	"github.com/gorilla/websocket"
-	"github.com/labstack/echo/v4"
+	"github.com/gofiber/fiber/v2"
+	"gorm.io/gorm"
 )
 
-var upgrader = websocket.Upgrader{}
-
-func CheckSession(c echo.Context) (*user.Session, error) {
-	session := user.DecodeSession(c)
-	if !user.VerifyKey(session.UserId, session.SessionKey) {
-		return nil, c.JSON(http.StatusForbidden, &message.Message{
-			Text: "You are not authorized!",
-		})
-	}
-	return session, nil
-}
-func CheckSessionObject(session *objects.Session) (*objects.Session, error) {
-	if !user.VerifyKey(session.UserId, session.SessionKey) {
-		return nil, echo.ErrBadRequest
-	}
-	return session, nil
-}
-func SearchUser(c echo.Context) error {
-	uqo := user.DecodeUnifiedQueryObject(c)
-	_, err := CheckSessionObject(uqo.Session)
-	util.CheckErrors("SearchUser", err)
-	name, ok := uqo.Params["Name"].(string)
-	if !ok {
-		log.Printf("SearchUser: Can't convert name parameter to string!")
-		return echo.ErrBadRequest
-	}
-	users := user.FindUserByName(name)
-	return c.JSON(http.StatusOK, users)
+type Message struct {
+	Message string `json:"message"`
 }
 
-func SignIn(c echo.Context) error {
-	_user := user.DecodeUser(c)
-	return user.SignInHandler(c, _user)
+func FindUserByEmail(email string) (*user.User, error) {
+	u := &user.User{}
+	if err := db.Connection.Model(u).Where("email = ?", email).First(u).Error; err != nil {
+		return nil, err
+	}
+	return u, nil
 }
-func SignUp(c echo.Context) error {
-	_user := user.DecodeUser(c)
-	log.Println("User decoded")
-	uuser := user.NewUser(_user.Name, _user.Email, _user.Password)
-	log.Println("User created")
-	user.AppendUserToDB(uuser)
-	log.Println("User appended to DB")
-	return user.SignInHandler(c, _user)
+func SignUp(c *fiber.Ctx) error {
+	type UserJSON struct {
+		Name     string
+		Email    string
+		Password string
+	}
+	u := &UserJSON{}
+	if err := c.BodyParser(u); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(&Message{"Error parsing user!"})
+	}
+	if _, err := FindUserByEmail(u.Email); err == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(&Message{"User already exists!"})
+	}
+	user := user.New(int(util.GenerateUserID()), u.Name, u.Email, util.GenerateHash(u.Password))
+	db.Insert(user)
+	s := session.New(user.UserId, u.Password)
+	session.Repository.Insert(s)
+	return c.Status(200).JSON(s)
 }
-func Connect(c echo.Context) error {
-	session, err := CheckSession(c)
-	util.CheckErrors("Connect CheckSession", err)
-	conn, err := upgrader.Upgrade(c.Response().Writer, c.Request(), nil)
-	message.OpenWS(conn, session.UserId)
-	util.CheckErrors("Connect OpenWebSocket", err)
-	defer message.CloseWS(session.UserId)
-	defer conn.Close()
-	conn.WriteJSON(message.GetLastPages(2))
-cycle:
-	for {
-		decoded_msg := &message.Message{}
-		err = conn.ReadJSON(decoded_msg)
-		util.CheckErrors("ConnectLoop", err)
-		switch decoded_msg.Text {
-		case "close":
-			break cycle
-		case "load":
-			conn.WriteJSON(message.GetLastPages(1))
-		default:
-			message.AppendMessage(decoded_msg)
+func SignIn(c *fiber.Ctx) error {
+	type LoginJSON struct {
+		Email    string
+		Password string
+	}
+	u := &LoginJSON{}
+	if err := c.BodyParser(u); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(&Message{"Error parsing user!"})
+	}
+	user, err := FindUserByEmail(u.Email)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return c.Status(fiber.StatusUnauthorized).JSON(&Message{"No user exists!"})
+		} else {
+			log.Printf("ERROR IN DB " + err.Error())
+			return c.Status(fiber.StatusInternalServerError).JSON(&Message{"Something went wrong!"})
 		}
 	}
-	return nil
+	if s := session.Repository.GetByUserID(user.UserId); s != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(&Message{"You're already authorized!"})
+	}
+	h := util.GenerateHash(u.Password)
+	if string(h[:]) == user.Password {
+		s := session.New(user.UserId, u.Password)
+		session.Repository.Insert(s)
+		return c.Status(http.StatusOK).JSON(s)
+	}
+	return c.Status(fiber.StatusUnauthorized).JSON(&Message{"Wrong password!"})
 }
